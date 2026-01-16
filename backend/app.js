@@ -48,7 +48,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // const path = require('path');
 // Middleware
 
-const cors = require('cors');
 
 app.use(cors({
   origin: [
