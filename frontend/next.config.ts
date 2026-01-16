@@ -5,7 +5,16 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500/api',
   },
   images: {
-    domains: ['localhost', 'next-js-and-typescript-project.onrender.com'],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'https',
+        hostname: 'next-js-and-typescript-project.onrender.com',
+      },
+    ],
   },
 };
 
