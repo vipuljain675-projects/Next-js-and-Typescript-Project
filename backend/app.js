@@ -52,11 +52,11 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://https://next-js-and-typescript-git-570742-vipul-jains-projects-6162711b.vercel.app/', // Add this after deployment
+    'https://next-js-and-typescript-git-570742-vipul-jains-projects-6162711b.vercel.app',
+    'https://next-js-and-typescript-project-kwz8.vercel.app'
   ],
   credentials: true,
 }));
-
 
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: false }));
