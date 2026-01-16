@@ -48,10 +48,17 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // const path = require('path');
 // Middleware
 
+const cors = require('cors');
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true
+  origin: [
+    'http://localhost:3000',
+    'https://your-vercel-app.vercel.app', // Add this after deployment
+  ],
+  credentials: true,
 }));
+
+
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
