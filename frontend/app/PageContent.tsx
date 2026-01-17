@@ -6,7 +6,14 @@ import { Home } from "@/types";
 import { AuthContext } from "@/context/AuthContext";
 import Badge from "@/components/UI/Badge";
 import Link from "next/link";
-import { gsap } from "gsap";
+
+// Import GSAP dynamically for production builds
+let gsap: any = null;
+if (typeof window !== 'undefined') {
+  import('gsap').then(module => {
+    gsap = module.gsap;
+  });
+}
 
 export default function HomeList() {
   const [homes, setHomes] = useState<Home[]>([]);
@@ -18,13 +25,15 @@ export default function HomeList() {
   const auth = useContext(AuthContext);
   const router = useRouter();
 
-  // Refs for animation
   const cardsAnimated = useRef(false);
 
   const getImageUrl = (url: string) => {
     if (!url) return "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=800";
     if (url.startsWith("http")) return url;
-    return `http://localhost:3500${url}`;
+    
+    // Use production backend URL if available
+    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500';
+    return `${baseURL}${url}`;
   };
 
   const fetchHomes = async (pageNum: number, isInitial = false) => {
@@ -53,29 +62,29 @@ export default function HomeList() {
 
   useEffect(() => {
     setPage(1);
-    cardsAnimated.current = false; // Reset animation flag
+    cardsAnimated.current = false;
     fetchHomes(1, true);
   }, [searchParams]);
 
-  // 🎨 FIXED: Animate only once when homes load, without clearing props
+  // 🎨 PRODUCTION-SAFE GSAP Animation
   useEffect(() => {
-    if (homes.length > 0 && !loading && !cardsAnimated.current) {
+    if (homes.length > 0 && !loading && !cardsAnimated.current && gsap) {
       cardsAnimated.current = true;
       
       const cards = document.querySelectorAll('.home-card');
       
-      // Set initial state WITHOUT animation interfering
-      gsap.set(cards, { opacity: 0, y: 30 });
-      
-      // Animate in
-      gsap.to(cards, {
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        stagger: 0.08,
-        ease: "power3.out",
-        clearProps: "transform,opacity" // Clear after animation completes
-      });
+      if (cards.length > 0) {
+        gsap.set(cards, { opacity: 0, y: 30 });
+        
+        gsap.to(cards, {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          stagger: 0.08,
+          ease: "power3.out",
+          clearProps: "transform,opacity"
+        });
+      }
     }
   }, [homes, loading]);
 
@@ -84,14 +93,15 @@ export default function HomeList() {
     setPage(nextPage);
     fetchHomes(nextPage, false);
     
-    // Button animation
-    gsap.to('.load-more-btn', {
-      scale: 0.95,
-      duration: 0.1,
-      yoyo: true,
-      repeat: 1,
-      ease: "power2.inOut"
-    });
+    if (gsap) {
+      gsap.to('.load-more-btn', {
+        scale: 0.95,
+        duration: 0.1,
+        yoyo: true,
+        repeat: 1,
+        ease: "power2.inOut"
+      });
+    }
   };
 
   const handleWishlist = async (e: React.MouseEvent, homeId: string) => {
@@ -105,21 +115,21 @@ export default function HomeList() {
 
     const heartBtn = e.currentTarget as HTMLButtonElement;
     
-    // Heart animation
-    gsap.to(heartBtn, {
-      scale: 1.2,
-      duration: 0.15,
-      yoyo: true,
-      repeat: 1,
-      ease: "power2.inOut"
-    });
+    if (gsap) {
+      gsap.to(heartBtn, {
+        scale: 1.2,
+        duration: 0.15,
+        yoyo: true,
+        repeat: 1,
+        ease: "power2.inOut"
+      });
+    }
 
     try {
       await api.post('/favourite-list', { homeId });
       
-      // Fill heart
       const heartPath = heartBtn.querySelector('.heart-path');
-      if (heartPath) {
+      if (heartPath && gsap) {
         gsap.to(heartPath, {
           fill: '#FF385C',
           duration: 0.3,
@@ -127,7 +137,6 @@ export default function HomeList() {
         });
       }
       
-      // Success toast
       showToast('❤️ Saved to wishlist!');
     } catch (err) {
       showToast('❌ Failed to save', 'error');
@@ -151,24 +160,29 @@ export default function HomeList() {
     `;
     document.body.appendChild(toast);
     
-    gsap.fromTo(toast,
-      { opacity: 0, y: -20 },
-      { 
-        opacity: 1, 
-        y: 0, 
-        duration: 0.3,
-        onComplete: () => {
-          setTimeout(() => {
-            gsap.to(toast, {
-              opacity: 0,
-              y: -20,
-              duration: 0.3,
-              onComplete: () => toast.remove()
-            });
-          }, 2000);
+    if (gsap) {
+      gsap.fromTo(toast,
+        { opacity: 0, y: -20 },
+        { 
+          opacity: 1, 
+          y: 0, 
+          duration: 0.3,
+          onComplete: () => {
+            setTimeout(() => {
+              gsap.to(toast, {
+                opacity: 0,
+                y: -20,
+                duration: 0.3,
+                onComplete: () => toast.remove()
+              });
+            }, 2000);
+          }
         }
-      }
-    );
+      );
+    } else {
+      // Fallback without animation
+      setTimeout(() => toast.remove(), 2000);
+    }
   };
 
   if (loading && page === 1) {
