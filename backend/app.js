@@ -10,22 +10,30 @@ const { Server } = require('socket.io');
 const storeRouter = require('./routes/storeRouter');
 const hostRouter = require('./routes/hostRouter');
 const authRouter = require('./routes/authRouter');
-const chatRouter = require('./routes/chatRouter'); // NEW
-const setupSocket = require('./socket'); // NEW
+const chatRouter = require('./routes/chatRouter');
+const setupSocket = require('./socket');
 
 const MONGODB_URI = process.env.MONGODB_URI; 
 
 const app = express();
 const server = http.createServer(app);
 
+// Allowed origins
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://next-js-and-typescript-project-kwz8.vercel.app',
+  process.env.CLIENT_URL_API
+].filter(Boolean);
+
 // Socket.IO setup with CORS
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL_API || 'http://localhost:3000',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   }
 });
+
 // Setup Socket.IO handlers
 setupSocket(io);
 
@@ -38,21 +46,9 @@ if (!fs.existsSync(uploadDir)){
     fs.mkdirSync(uploadDir);
 }
 
-// Add this line to your backend/app.js after other middleware
-// and before your routes:
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Make sure to import path at the top:
-// const path = require('path');
-// Middleware
-
-
+// CORS Middleware
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://next-js-and-typescript-project-kwz8.vercel.app'
-  ],
+  origin: allowedOrigins,
   credentials: true,
 }));
 
@@ -65,7 +61,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api', authRouter);  
 app.use('/api', storeRouter); 
 app.use('/api/host', hostRouter);
-app.use('/api/chat', chatRouter); // NEW
+app.use('/api/chat', chatRouter);
 
 // 404 Handler
 app.use((req, res, next) => {
@@ -87,6 +83,7 @@ mongoose
     server.listen(port, () => {
       console.log(`🔥 API Server live on Atlas & running at port ${port}`);
       console.log(`🔌 Socket.IO ready for connections`);
+      console.log(`✅ CORS enabled for:`, allowedOrigins);
     });
   })
   .catch((err) => {
