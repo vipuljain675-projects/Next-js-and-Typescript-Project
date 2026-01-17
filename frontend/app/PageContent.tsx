@@ -1,11 +1,12 @@
 'use client';
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { Home } from "@/types";
 import { AuthContext } from "@/context/AuthContext";
 import Badge from "@/components/UI/Badge";
 import Link from "next/link";
+import { gsap } from "gsap";
 
 export default function HomeList() {
   const [homes, setHomes] = useState<Home[]>([]);
@@ -16,6 +17,9 @@ export default function HomeList() {
   const searchParams = useSearchParams();
   const auth = useContext(AuthContext);
   const router = useRouter();
+
+  // Refs for animation
+  const cardsAnimated = useRef(false);
 
   const getImageUrl = (url: string) => {
     if (!url) return "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=800";
@@ -49,16 +53,47 @@ export default function HomeList() {
 
   useEffect(() => {
     setPage(1);
+    cardsAnimated.current = false; // Reset animation flag
     fetchHomes(1, true);
   }, [searchParams]);
+
+  // 🎨 FIXED: Animate only once when homes load, without clearing props
+  useEffect(() => {
+    if (homes.length > 0 && !loading && !cardsAnimated.current) {
+      cardsAnimated.current = true;
+      
+      const cards = document.querySelectorAll('.home-card');
+      
+      // Set initial state WITHOUT animation interfering
+      gsap.set(cards, { opacity: 0, y: 30 });
+      
+      // Animate in
+      gsap.to(cards, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        stagger: 0.08,
+        ease: "power3.out",
+        clearProps: "transform,opacity" // Clear after animation completes
+      });
+    }
+  }, [homes, loading]);
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
     fetchHomes(nextPage, false);
+    
+    // Button animation
+    gsap.to('.load-more-btn', {
+      scale: 0.95,
+      duration: 0.1,
+      yoyo: true,
+      repeat: 1,
+      ease: "power2.inOut"
+    });
   };
 
-  // 🟢 FUNCTIONAL HEART ICON LOGIC
   const handleWishlist = async (e: React.MouseEvent, homeId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -68,17 +103,83 @@ export default function HomeList() {
       return;
     }
 
+    const heartBtn = e.currentTarget as HTMLButtonElement;
+    
+    // Heart animation
+    gsap.to(heartBtn, {
+      scale: 1.2,
+      duration: 0.15,
+      yoyo: true,
+      repeat: 1,
+      ease: "power2.inOut"
+    });
+
     try {
-      // Connects to storeRouter.js: router.post("/favourite-list", ...)
       await api.post('/favourite-list', { homeId });
-      alert("Added to saved homes!");
+      
+      // Fill heart
+      const heartPath = heartBtn.querySelector('.heart-path');
+      if (heartPath) {
+        gsap.to(heartPath, {
+          fill: '#FF385C',
+          duration: 0.3,
+          ease: "power2.out"
+        });
+      }
+      
+      // Success toast
+      showToast('❤️ Saved to wishlist!');
     } catch (err) {
-      alert("Failed to save home. Please try again.");
+      showToast('❌ Failed to save', 'error');
     }
   };
 
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = `
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      background: white;
+      padding: 12px 24px;
+      border-radius: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-weight: 600;
+      z-index: 9999;
+      border: 2px solid ${type === 'error' ? '#ff4444' : '#FF385C'};
+    `;
+    document.body.appendChild(toast);
+    
+    gsap.fromTo(toast,
+      { opacity: 0, y: -20 },
+      { 
+        opacity: 1, 
+        y: 0, 
+        duration: 0.3,
+        onComplete: () => {
+          setTimeout(() => {
+            gsap.to(toast, {
+              opacity: 0,
+              y: -20,
+              duration: 0.3,
+              onComplete: () => toast.remove()
+            });
+          }, 2000);
+        }
+      }
+    );
+  };
+
   if (loading && page === 1) {
-    return <div className="text-center mt-5 pt-5">Loading homes...</div>;
+    return (
+      <div className="text-center mt-5 pt-5" style={{ marginTop: "180px" }}>
+        <div className="spinner-border text-danger" role="status">
+          <span className="visually-hidden">Loading homes...</span>
+        </div>
+        <p className="mt-3 text-muted">Finding amazing places for you...</p>
+      </div>
+    );
   }
 
   return (
@@ -99,7 +200,6 @@ export default function HomeList() {
                 
                 {home.rating >= 4.8 && <Badge type="favourite" />}
                 
-                {/* 🟢 UPDATED HEART BUTTON */}
                 <button 
                   className="wishlist-btn"
                   aria-label="Add to wishlist"
@@ -111,6 +211,7 @@ export default function HomeList() {
                       stroke="#fff"
                       strokeWidth="2"
                       fill="rgba(0,0,0,0.5)"
+                      className="heart-path"
                     />
                   </svg>
                 </button>
@@ -147,8 +248,11 @@ export default function HomeList() {
 
       {homes.length === 0 && !loading && (
         <div className="text-center py-5">
-          <h3 className="text-secondary">No homes found</h3>
-          <p className="text-muted">Try adjusting your search criteria</p>
+          <div className="empty-state">
+            <i className="bi bi-house-x-fill" style={{ fontSize: '64px', color: '#ddd' }}></i>
+            <h3 className="text-secondary mt-3">No homes found</h3>
+            <p className="text-muted">Try adjusting your search criteria</p>
+          </div>
         </div>
       )}
     </main>
