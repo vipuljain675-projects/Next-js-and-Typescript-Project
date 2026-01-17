@@ -47,8 +47,29 @@ if (!fs.existsSync(uploadDir)){
 }
 
 // CORS Middleware
+// CORS Middleware with pattern matching
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    const allowedPatterns = [
+      'http://localhost:3000',
+      /^https:\/\/.*\.vercel\.app$/, // All Vercel deployments
+      process.env.CLIENT_URL_API
+    ];
+    
+    const isAllowed = allowedPatterns.some(pattern => {
+      if (typeof pattern === 'string') return pattern === origin;
+      return pattern.test(origin);
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
