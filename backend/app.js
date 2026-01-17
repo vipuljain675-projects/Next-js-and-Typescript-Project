@@ -52,7 +52,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://next-js-and-typescript-git-570742-vipul-jains-projects-6162711b.vercel.app',
     'https://next-js-and-typescript-project-kwz8.vercel.app'
   ],
   credentials: true,
