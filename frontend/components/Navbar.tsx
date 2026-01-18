@@ -4,9 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { AuthContext } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
-import gsap from "@/lib/gsap"; // ✅ Change this line
-
-// Rest of your Navbar code stays the same...
+import gsap from "@/lib/gsap";
 
 const Navbar = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -114,21 +112,40 @@ const Navbar = () => {
       <div className="container-fluid px-4 px-md-5">
         <div className="d-flex justify-content-between align-items-center" style={{ height: "80px" }}>
           
-          {/* Logo with GSAP ref */}
+          {/* Logo with REAL Airbnb Bélo Symbol */}
           <div ref={logoRef}>
             <Link href="/" className="text-decoration-none d-flex align-items-center logo-container">
-              <svg width="32" height="32" fill="#FF385C" viewBox="0 0 32 32" className="logo-icon">
-                <path d="M16 1c2 0 3.46 1.67 3.46 3.33 0 2-1.46 3.67-3.46 3.67s-3.46-1.67-3.46-3.67C12.54 2.67 14 1 16 1zm0 24.5c-1.86 0-3.54.5-5.17 1.42L8.7 19.1a7.34 7.34 0 0 1-.45-2.6c0-3.91 3.18-7.08 7.08-7.08h1.34c3.91 0 7.08 3.18 7.08 7.08 0 .9-.17 1.78-.45 2.6l-2.13 7.82c-1.63-.92-3.31-1.42-5.17-1.42z"/>
+              <svg width="30" height="32" fill="#FF385C" viewBox="0 0 448 512" className="logo-icon">
+                <path d="M224 373.12c-25.24-31.67-40.08-59.43-45-83.18-22.55-88 112.61-88 90.06 0-5.45 24.25-20.29 52-45 83.18zm138.15 73.23c-42.06 18.31-83.67-10.88-119.3-50.47 103.9-130.07 46.11-200-18.85-200-54.92 0-85.16 46.51-73.28 100.5 6.93 29.19 25.23 62.39 54.43 99.5-32.53 36.05-60.55 52.69-85.15 54.92-50 7.43-89.11-41.06-71.3-91.09 15.1-39.16 111.72-231.18 115.87-241.56 15.75-30.07 25.56-57.4 59.38-57.4 32.34 0 43.4 25.94 60.37 59.87 36 70.62 89.35 177.48 114.84 239.09 13.17 33.07-1.37 71.29-37.01 86.64zm47-136.12C280.27 35.93 273.13 32 224 32c-45.52 0-64.87 31.67-84.66 72.79C33.18 317.1 22.89 347.19 22 349.81-3.22 419.14 48.74 480 111.63 480c21.71 0 60.61-6.06 112.37-62.4 58.68 63.78 101.26 62.4 112.37 62.4 62.89.05 114.85-60.86 89.61-130.19.02-3.89-16.82-38.9-16.82-39.58z"/>
               </svg>
               <span className="ms-2 fw-bold fs-4 d-none d-sm-inline logo-text" style={{ color: "#FF385C" }}>airbnb</span>
             </Link>
           </div>
 
-          {/* Top Navigation */}
-          <div className="d-none d-lg-flex align-items-center gap-2">
-            <Link href="/" className={`nav-tab-link-top ${pathname === '/' ? 'active' : ''}`}>Homes</Link>
-            <Link href="/experiences" className="nav-tab-link-top">Experiences</Link>
-            <Link href="/services" className="nav-tab-link-top">Services</Link>
+          {/* Top Navigation with Real Icons */}
+          <div className="d-none d-lg-flex align-items-center gap-4">
+            <Link href="/" className={`nav-tab-link-top d-flex align-items-center gap-2 ${pathname === '/' ? 'active' : ''}`}>
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor">
+                <path d="M16 1l-9 8v14c0 1.1.9 2 2 2h5v-7h4v7h5c1.1 0 2-.9 2-2V9l-9-8z"/>
+              </svg>
+              <span>Homes</span>
+            </Link>
+            
+            <Link href="/experiences" className="nav-tab-link-top d-flex align-items-center gap-2 position-relative">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor">
+                <path d="M16 1C8.82 1 3 6.82 3 14c0 3.64 1.48 6.93 3.88 9.32l.01.01L16 32l9.11-8.67c.01 0 .01-.01.01-.01A12.94 12.94 0 0 0 29 14c0-7.18-5.82-13-13-13zm0 18a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/>
+              </svg>
+              <span>Experiences</span>
+              <span className="badge bg-danger text-white" style={{ fontSize: '9px', padding: '2px 6px', marginLeft: '-4px' }}>NEW</span>
+            </Link>
+            
+            <Link href="/services" className="nav-tab-link-top d-flex align-items-center gap-2 position-relative">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor">
+                <path d="M16 1c-8.28 0-15 6.72-15 15 0 8.28 6.72 15 15 15 8.28 0 15-6.72 15-15 0-8.28-6.72-15-15-15zm7 16h-6v6h-2v-6H9v-2h6V9h2v6h6v2z"/>
+              </svg>
+              <span>Services</span>
+              <span className="badge bg-danger text-white" style={{ fontSize: '9px', padding: '2px 6px', marginLeft: '-4px' }}>NEW</span>
+            </Link>
           </div>
 
           {/* Right Menu */}
@@ -217,7 +234,7 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Search Bar with GSAP ref */}
+        {/* Search Bar */}
         <div ref={searchBarRef} className="pb-3 d-flex justify-content-center">
           <form onSubmit={handleSearch} className="search-bar-container w-100" style={{ maxWidth: '850px' }}>
             <div className="search-section search-section-start">
