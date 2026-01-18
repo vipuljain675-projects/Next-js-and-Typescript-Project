@@ -6,11 +6,12 @@ import { Home } from "@/types";
 import { AuthContext } from "@/context/AuthContext";
 import Badge from "@/components/UI/Badge";
 import Link from "next/link";
-import gsap from "@/lib/gsap"; // ✅ Import from our utility
+import gsap from "@/lib/gsap";
 
 export default function HomeList() {
   const [homes, setHomes] = useState<Home[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
@@ -23,13 +24,15 @@ export default function HomeList() {
   const getImageUrl = (url: string) => {
     if (!url) return "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=800";
     if (url.startsWith("http")) return url;
-    
-    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500';
-    return `${baseURL}${url}`;
+    return `http://localhost:3500${url}`;
   };
 
   const fetchHomes = async (pageNum: number, isInitial = false) => {
-    if (isInitial) setLoading(true);
+    if (isInitial) {
+      setLoading(true);
+      setError(null);
+    }
+    
     const location = searchParams.get("location") || "";
     const checkIn = searchParams.get("checkIn") || "";
     const checkOut = searchParams.get("checkOut") || "";
@@ -40,13 +43,27 @@ export default function HomeList() {
         endpoint = `/search?location=${location}&checkIn=${checkIn}&checkOut=${checkOut}&page=${pageNum}`;
       }
 
+      console.log('📡 Fetching from endpoint:', endpoint);
+      
       const res = await api.get(endpoint);
+      
+      console.log('✅ Response received:', res.data);
+      
       const fetchedHomes = res.data.homes || [];
 
       setHomes(prev => isInitial ? fetchedHomes : [...prev, ...fetchedHomes]);
-      setHasMore(res.data.hasNextPage);
-    } catch (err) {
-      console.error("Fetch error:", err);
+      setHasMore(res.data.hasNextPage || false);
+      setError(null);
+    } catch (err: any) {
+      console.error("❌ Fetch error:", err);
+      
+      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        setError('Backend not responding. Is it running on http://localhost:3500?');
+      } else if (err.response?.status === 404) {
+        setError('API endpoint not found. Check backend routes.');
+      } else {
+        setError(err.response?.data?.message || err.message || 'Failed to load homes');
+      }
     } finally {
       setLoading(false);
     }
@@ -58,12 +75,11 @@ export default function HomeList() {
     fetchHomes(1, true);
   }, [searchParams]);
 
-  // 🎨 GSAP Animation - Now works in production!
+  // GSAP Animation
   useEffect(() => {
     if (homes.length > 0 && !loading && !cardsAnimated.current) {
       cardsAnimated.current = true;
       
-      // Small delay to ensure DOM is ready
       setTimeout(() => {
         const cards = document.querySelectorAll('.home-card');
         
@@ -131,9 +147,9 @@ export default function HomeList() {
         });
       }
       
-      showToast('❤️ Saved to wishlist!');
+      showToast('❤️ Saved!');
     } catch (err) {
-      showToast('❌ Failed to save', 'error');
+      showToast('❌ Failed', 'error');
     }
   };
 
@@ -178,9 +194,22 @@ export default function HomeList() {
     return (
       <div className="text-center mt-5 pt-5" style={{ marginTop: "180px" }}>
         <div className="spinner-border text-danger" role="status">
-          <span className="visually-hidden">Loading homes...</span>
+          <span className="visually-hidden">Loading...</span>
         </div>
-        <p className="mt-3 text-muted">Finding amazing places for you...</p>
+      </div>
+    );
+  }
+
+  if (error && homes.length === 0) {
+    return (
+      <div className="text-center mt-5 pt-5" style={{ marginTop: "180px" }}>
+        <div className="alert alert-danger mx-auto" style={{ maxWidth: '600px' }}>
+          <h4>⚠️ Error</h4>
+          <p>{error}</p>
+          <button className="btn btn-danger mt-3" onClick={() => fetchHomes(1, true)}>
+            🔄 Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -249,13 +278,10 @@ export default function HomeList() {
         </div>
       )}
 
-      {homes.length === 0 && !loading && (
+      {homes.length === 0 && !loading && !error && (
         <div className="text-center py-5">
-          <div className="empty-state">
-            <i className="bi bi-house-x-fill" style={{ fontSize: '64px', color: '#ddd' }}></i>
-            <h3 className="text-secondary mt-3">No homes found</h3>
-            <p className="text-muted">Try adjusting your search criteria</p>
-          </div>
+          <i className="bi bi-house-x-fill" style={{ fontSize: '64px', color: '#ddd' }}></i>
+          <h3 className="text-secondary mt-3">No homes found</h3>
         </div>
       )}
     </main>

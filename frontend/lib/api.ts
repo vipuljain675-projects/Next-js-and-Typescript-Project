@@ -6,44 +6,58 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
+  timeout: 10000,
 });
 
 // Request interceptor
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    console.log('🔵 API Request:', config.method?.toUpperCase(), config.url);
+    
+    return config;
+  },
+  (error) => {
+    console.error('❌ Request Error:', error);
+    return Promise.reject(error);
   }
-  
-  console.log('🔵 API Request:', config.method?.toUpperCase(), config.url);
-  
-  return config;
-}, (error) => {
-  console.error('❌ Request Error:', error);
-  return Promise.reject(error);
-});
+);
 
-// Response interceptor
+// Response interceptor - FIXED
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ API Response:', response.config.url, response.status);
+    console.log('✅ API Success:', response.config.url);
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', {
+    // FIXED ERROR LOGGING
+    const errorDetails = {
       url: error.config?.url,
+      method: error.config?.method,
       status: error.response?.status,
-      message: error.response?.data?.message || error.message
-    });
+      statusText: error.response?.statusText,
+      message: error.message
+    };
+    
+    console.error('❌ API Error:', errorDetails);
+    
+    // Check if it's a network error
+    if (!error.response) {
+      console.error('❌ Network Error - Backend not responding');
+    }
     
     // Auto-logout on 401
     if (error.response?.status === 401) {
       localStorage.clear();
-      // Don't redirect if already on login page
-      if (!window.location.pathname.includes('/login')) {
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
     }
+    
     return Promise.reject(error);
   }
 );
