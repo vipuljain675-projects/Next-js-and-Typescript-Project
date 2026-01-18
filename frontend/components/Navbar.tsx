@@ -171,7 +171,7 @@ const Navbar = () => {
                     )}
                   </Link>
                   
-                  <Link href="/host" className="nav-link-animated text-dark fw-semibold small text-decoration-none">Switch to Host</Link>
+                  <Link href="/host/my-listings" className="nav-link-animated text-dark fw-semibold small text-decoration-none">Switch to Host</Link>
                </div>
             ) : (
               <Link href="/host" className="nav-tab-link-top d-none d-md-block">Airbnb your home</Link>

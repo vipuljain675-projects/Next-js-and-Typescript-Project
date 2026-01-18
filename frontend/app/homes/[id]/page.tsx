@@ -77,6 +77,7 @@ export default function HomeDetailsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
+  const guestDropdownRef = useRef<HTMLDivElement>(null);
   
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
@@ -84,9 +85,20 @@ export default function HomeDetailsPage() {
 
   const [checkIn, setCheckIn] = useState(searchParams.get('checkIn') || '');
   const [checkOut, setCheckOut] = useState(searchParams.get('checkOut') || '');
-  const [guests, setGuests] = useState({ adults: 1, children: 0, seniors: 0 });
+  const [guests, setGuests] = useState({ adults: 1, children: 0, infants: 0, pets: 0 });
 
-  const totalGuestCount = guests.adults + guests.children + guests.seniors;
+  const totalGuestCount = guests.adults + guests.children + guests.infants;
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (guestDropdownRef.current && !guestDropdownRef.current.contains(event.target as Node)) {
+        setShowGuestDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const getImageUrl = (url: string) => {
     if (!url) return "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=800";
@@ -133,7 +145,14 @@ export default function HomeDetailsPage() {
     if (!auth?.isLoggedIn) return router.push('/login');
     if (!checkIn || !checkOut || totalNights === 0) return alert("Please select valid dates");
     try {
-      await api.post('/bookings', { homeId: home?._id, checkIn, checkOut, ...guests });
+      await api.post('/bookings', { 
+        homeId: home?._id, 
+        checkIn, 
+        checkOut, 
+        adults: guests.adults,
+        children: guests.children,
+        seniors: guests.infants // keeping your backend field name
+      });
       router.push('/bookings');
     } catch (err: any) { 
       alert(err.response?.data?.message || "Booking failed"); 
@@ -175,6 +194,16 @@ export default function HomeDetailsPage() {
     setNewReview({ rating: rev.rating, comment: rev.comment });
     setShowReviewForm(true);
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  };
+
+  // Guest counter handlers
+  const updateGuestCount = (type: 'adults' | 'children' | 'infants' | 'pets', delta: number) => {
+    setGuests(prev => {
+      const newValue = prev[type] + delta;
+      if (type === 'adults' && newValue < 1) return prev; // At least 1 adult
+      if (newValue < 0) return prev; // No negative values
+      return { ...prev, [type]: newValue };
+    });
   };
 
   if (loading || !home) return <div className="text-center mt-5">Loading...</div>;
@@ -327,12 +356,170 @@ export default function HomeDetailsPage() {
                   <input type="date" className="form-control border-0 p-0 shadow-none" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
                 </div>
               </div>
-              <div className="p-2 position-relative">
+              <div className="p-2 position-relative" ref={guestDropdownRef}>
                 <label className="small fw-bold d-block text-muted" style={{ fontSize: '10px' }}>GUESTS</label>
-                <div className="cursor-pointer d-flex justify-content-between align-items-center py-1" onClick={() => setShowGuestDropdown(!showGuestDropdown)}>
-                  <span>{totalGuestCount} Guest{totalGuestCount > 1 ? 's' : ''}</span>
+                <div 
+                  className="cursor-pointer d-flex justify-content-between align-items-center py-1" 
+                  onClick={() => setShowGuestDropdown(!showGuestDropdown)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span>{totalGuestCount} guest{totalGuestCount !== 1 ? 's' : ''}</span>
                   <i className={`bi bi-chevron-${showGuestDropdown ? 'up' : 'down'}`}></i>
                 </div>
+
+                {/* Guest Dropdown */}
+                {showGuestDropdown && (
+                  <div 
+                    className="position-absolute bg-white border rounded-3 shadow-lg p-3 mt-2" 
+                    style={{ 
+                      zIndex: 1000, 
+                      width: '100%',
+                      left: 0,
+                      top: '100%'
+                    }}
+                  >
+                    {/* Adults */}
+                    <div className="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                      <div>
+                        <div className="fw-bold">Adults</div>
+                        <div className="small text-muted">Age 13+</div>
+                      </div>
+                      <div className="d-flex align-items-center gap-3">
+                        <button 
+                          className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                          style={{ width: '32px', height: '32px', padding: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateGuestCount('adults', -1);
+                          }}
+                          disabled={guests.adults <= 1}
+                        >
+                          −
+                        </button>
+                        <span className="fw-bold" style={{ minWidth: '20px', textAlign: 'center' }}>{guests.adults}</span>
+                        <button 
+                          className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                          style={{ width: '32px', height: '32px', padding: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateGuestCount('adults', 1);
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Children */}
+                    <div className="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                      <div>
+                        <div className="fw-bold">Children</div>
+                        <div className="small text-muted">Ages 2-12</div>
+                      </div>
+                      <div className="d-flex align-items-center gap-3">
+                        <button 
+                          className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                          style={{ width: '32px', height: '32px', padding: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateGuestCount('children', -1);
+                          }}
+                          disabled={guests.children <= 0}
+                        >
+                          −
+                        </button>
+                        <span className="fw-bold" style={{ minWidth: '20px', textAlign: 'center' }}>{guests.children}</span>
+                        <button 
+                          className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                          style={{ width: '32px', height: '32px', padding: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateGuestCount('children', 1);
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Infants */}
+                    <div className="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                      <div>
+                        <div className="fw-bold">Infants</div>
+                        <div className="small text-muted">Under 2</div>
+                      </div>
+                      <div className="d-flex align-items-center gap-3">
+                        <button 
+                          className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                          style={{ width: '32px', height: '32px', padding: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateGuestCount('infants', -1);
+                          }}
+                          disabled={guests.infants <= 0}
+                        >
+                          −
+                        </button>
+                        <span className="fw-bold" style={{ minWidth: '20px', textAlign: 'center' }}>{guests.infants}</span>
+                        <button 
+                          className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                          style={{ width: '32px', height: '32px', padding: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateGuestCount('infants', 1);
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Pets */}
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div className="fw-bold">Pets</div>
+                        <div className="small text-muted">
+                          <span className="text-decoration-underline" style={{ cursor: 'pointer' }}>Bringing a service animal?</span>
+                        </div>
+                      </div>
+                      <div className="d-flex align-items-center gap-3">
+                        <button 
+                          className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                          style={{ width: '32px', height: '32px', padding: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateGuestCount('pets', -1);
+                          }}
+                          disabled={guests.pets <= 0}
+                        >
+                          −
+                        </button>
+                        <span className="fw-bold" style={{ minWidth: '20px', textAlign: 'center' }}>{guests.pets}</span>
+                        <button 
+                          className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                          style={{ width: '32px', height: '32px', padding: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateGuestCount('pets', 1);
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Close Button */}
+                    <button 
+                      className="btn btn-sm btn-dark w-100 mt-3 fw-bold"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowGuestDropdown(false);
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             

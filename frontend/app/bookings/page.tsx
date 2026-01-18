@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { QRCodeSVG } from 'qrcode.react';
 
-// 🟢 FIX 1: Explicit Interface to resolve "type never" errors
 interface Booking {
   _id: string;
   homeName: string;
@@ -11,22 +10,23 @@ interface Booking {
   checkOut: string;
   status: 'Pending' | 'Confirmed' | 'Cancelled';
   totalPrice: number;
-  adults: number;
-  children: number;
+  guests?: {
+    adults: number;
+    children: number;
+    seniors: number;
+  };
   user: {
     email: string;
   };
 }
 
 export default function BookingsPage() {
-  // 🟢 FIX 2: Type the state as Booking[]
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'Upcoming' | 'History'>('Upcoming');
 
   const fetchBookings = async () => {
     try {
-      // 🟢 FIX 3: Ensure your axios instance includes the token
       const res = await api.get("/bookings");
       setBookings(res.data.bookings);
     } catch (err) {
@@ -44,13 +44,18 @@ export default function BookingsPage() {
     if (!window.confirm("Are you sure you want to cancel this trip?")) return;
     
     try {
-      // Hits storeController.postCancelBooking
       await api.post("/cancel-booking", { bookingId });
       alert("Trip cancelled successfully.");
-      fetchBookings(); // Refresh to move trip to history
+      fetchBookings();
     } catch (err) {
       alert("Failed to cancel trip. Please try again.");
     }
+  };
+
+  // Calculate total guests with safe fallback for old bookings
+  const getTotalGuests = (guests?: { adults: number; children: number; seniors: number }) => {
+    if (!guests) return 1; // Fallback for old bookings without guests data
+    return guests.adults + guests.children + guests.seniors;
   };
 
   // Filter logic for Tabs
@@ -111,6 +116,10 @@ export default function BookingsPage() {
                           <label className="small text-secondary fw-bold d-block">CHECK-OUT</label>
                           <span className="fw-bold">{new Date(booking.checkOut).toLocaleDateString()}</span>
                         </div>
+                        <div>
+                          <label className="small text-secondary fw-bold d-block">GUESTS</label>
+                          <span className="fw-bold">{getTotalGuests(booking.guests)}</span>
+                        </div>
                       </div>
                       <div className="text-success fw-bold fs-5">₹{booking.totalPrice.toLocaleString()}</div>
                     </div>
@@ -144,7 +153,7 @@ export default function BookingsPage() {
                         </div>
                         <div className="col-4">
                           <label className="small text-secondary fw-bold d-block">GUESTS</label>
-                          <span className="fw-bold">{booking.adults + (booking.children || 0)}</span>
+                          <span className="fw-bold">{getTotalGuests(booking.guests)}</span>
                         </div>
                       </div>
 
