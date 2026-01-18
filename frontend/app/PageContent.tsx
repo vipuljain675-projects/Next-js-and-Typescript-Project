@@ -6,14 +6,7 @@ import { Home } from "@/types";
 import { AuthContext } from "@/context/AuthContext";
 import Badge from "@/components/UI/Badge";
 import Link from "next/link";
-
-// Import GSAP dynamically for production builds
-let gsap: any = null;
-if (typeof window !== 'undefined') {
-  import('gsap').then(module => {
-    gsap = module.gsap;
-  });
-}
+import gsap from "@/lib/gsap"; // ✅ Import from our utility
 
 export default function HomeList() {
   const [homes, setHomes] = useState<Home[]>([]);
@@ -31,7 +24,6 @@ export default function HomeList() {
     if (!url) return "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=800";
     if (url.startsWith("http")) return url;
     
-    // Use production backend URL if available
     const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3500';
     return `${baseURL}${url}`;
   };
@@ -66,25 +58,28 @@ export default function HomeList() {
     fetchHomes(1, true);
   }, [searchParams]);
 
-  // 🎨 PRODUCTION-SAFE GSAP Animation
+  // 🎨 GSAP Animation - Now works in production!
   useEffect(() => {
-    if (homes.length > 0 && !loading && !cardsAnimated.current && gsap) {
+    if (homes.length > 0 && !loading && !cardsAnimated.current) {
       cardsAnimated.current = true;
       
-      const cards = document.querySelectorAll('.home-card');
-      
-      if (cards.length > 0) {
-        gsap.set(cards, { opacity: 0, y: 30 });
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        const cards = document.querySelectorAll('.home-card');
         
-        gsap.to(cards, {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          stagger: 0.08,
-          ease: "power3.out",
-          clearProps: "transform,opacity"
-        });
-      }
+        if (cards.length > 0) {
+          gsap.set(cards, { opacity: 0, y: 30 });
+          
+          gsap.to(cards, {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            stagger: 0.08,
+            ease: "power3.out",
+            clearProps: "transform,opacity"
+          });
+        }
+      }, 50);
     }
   }, [homes, loading]);
 
@@ -93,8 +88,9 @@ export default function HomeList() {
     setPage(nextPage);
     fetchHomes(nextPage, false);
     
-    if (gsap) {
-      gsap.to('.load-more-btn', {
+    const btn = document.querySelector('.load-more-btn');
+    if (btn) {
+      gsap.to(btn, {
         scale: 0.95,
         duration: 0.1,
         yoyo: true,
@@ -115,21 +111,19 @@ export default function HomeList() {
 
     const heartBtn = e.currentTarget as HTMLButtonElement;
     
-    if (gsap) {
-      gsap.to(heartBtn, {
-        scale: 1.2,
-        duration: 0.15,
-        yoyo: true,
-        repeat: 1,
-        ease: "power2.inOut"
-      });
-    }
+    gsap.to(heartBtn, {
+      scale: 1.2,
+      duration: 0.15,
+      yoyo: true,
+      repeat: 1,
+      ease: "power2.inOut"
+    });
 
     try {
       await api.post('/favourite-list', { homeId });
       
       const heartPath = heartBtn.querySelector('.heart-path');
-      if (heartPath && gsap) {
+      if (heartPath) {
         gsap.to(heartPath, {
           fill: '#FF385C',
           duration: 0.3,
@@ -160,29 +154,24 @@ export default function HomeList() {
     `;
     document.body.appendChild(toast);
     
-    if (gsap) {
-      gsap.fromTo(toast,
-        { opacity: 0, y: -20 },
-        { 
-          opacity: 1, 
-          y: 0, 
-          duration: 0.3,
-          onComplete: () => {
-            setTimeout(() => {
-              gsap.to(toast, {
-                opacity: 0,
-                y: -20,
-                duration: 0.3,
-                onComplete: () => toast.remove()
-              });
-            }, 2000);
-          }
+    gsap.fromTo(toast,
+      { opacity: 0, y: -20 },
+      { 
+        opacity: 1, 
+        y: 0, 
+        duration: 0.3,
+        onComplete: () => {
+          setTimeout(() => {
+            gsap.to(toast, {
+              opacity: 0,
+              y: -20,
+              duration: 0.3,
+              onComplete: () => toast.remove()
+            });
+          }, 2000);
         }
-      );
-    } else {
-      // Fallback without animation
-      setTimeout(() => toast.remove(), 2000);
-    }
+      }
+    );
   };
 
   if (loading && page === 1) {

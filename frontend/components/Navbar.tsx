@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { AuthContext } from "@/context/AuthContext";
 import { useChat } from "@/context/ChatContext";
-import { gsap } from "gsap";
+import gsap from "@/lib/gsap"; // ✅ Change this line
+
+// Rest of your Navbar code stays the same...
 
 const Navbar = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
