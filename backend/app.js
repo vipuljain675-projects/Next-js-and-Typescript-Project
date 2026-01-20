@@ -21,7 +21,7 @@ const server = http.createServer(app);
 // Allowed origins
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://next-js-and-typescript-project-kwz8.vercel.app',
+  'https://next-js-and-typescript-project.vercel.app/',
   process.env.CLIENT_URL_API
 ].filter(Boolean);
 
