@@ -365,3 +365,86 @@ exports.sendFile = async (req, res) => {
     res.status(500).json({ message: 'Failed to send file' });
   }
 };
+
+// Add this method to your existing chatController.js file
+exports.sendFile = async (req, res) => {
+  try {
+    // Check if file was uploaded successfully by multer
+    if (!req.file) {
+      console.error('No file received by multer');
+      return res.status(400).json({ 
+        message: 'No file uploaded or file type not allowed',
+        details: 'Please ensure the file is an image, PDF, or Word document under 5MB'
+      });
+    }
+
+    const { receiverId, homeId } = req.body;
+    const senderId = req.userId;
+    const file = req.file;
+
+    console.log('File upload attempt:', {
+      originalName: file.originalname,
+      size: file.size,
+      mimetype: file.mimetype,
+      receiverId,
+      homeId
+    });
+
+    if (!receiverId || !homeId) {
+      return res.status(400).json({ message: 'Missing receiverId or homeId' });
+    }
+
+    const conversationId = generateConversationId(senderId, receiverId, homeId);
+
+    // Determine file type
+    let fileType = 'file';
+    if (file.mimetype.startsWith('image/')) {
+      fileType = 'image';
+    } else if (file.mimetype === 'application/pdf') {
+      fileType = 'document';
+    }
+
+    // Create file URL (adjust based on your server setup)
+    const fileUrl = `/uploads/chat-files/${file.filename}`;
+
+    const newMessage = new Message({
+      conversationId,
+      senderId,
+      receiverId,
+      homeId,
+      message: file.originalname,
+      type: fileType,
+      fileUrl: fileUrl,
+      fileName: file.originalname,
+      fileSize: file.size,
+      mimeType: file.mimetype
+    });
+
+    await newMessage.save();
+
+    // Populate before sending back
+    await newMessage.populate('senderId', 'firstName lastName email');
+    await newMessage.populate('receiverId', 'firstName lastName email');
+    await newMessage.populate('homeId', 'houseName photoUrl');
+
+    console.log('File message saved successfully:', newMessage._id);
+
+    // Emit via WebSocket
+    const io = req.app.get('io');
+    if (io) {
+      io.to(conversationId).emit('new_message', newMessage);
+      io.to(`user_${receiverId}`).emit('notification', {
+        type: 'new_message',
+        message: newMessage
+      });
+    }
+
+    res.status(201).json({ message: newMessage });
+  } catch (err) {
+    console.error('Send file error:', err);
+    res.status(500).json({ 
+      message: 'Failed to send file',
+      error: err.message 
+    });
+  }
+};
